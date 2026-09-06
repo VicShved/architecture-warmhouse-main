@@ -1,0 +1,18 @@
+@startuml
+title WarmHome Context Diagram
+
+top to bottom direction
+
+!include ./C4_Context.puml
+
+Person(user, "Пользователь", "Пользователь warmhouse system")
+System(WarmHouseSystem, "Система Теплый дом", "Система управление умными устройствами")
+Boundary(home, "Дома пользователей") {
+    System_Ext(api, "API умных устройств", "Взаимодействие с умными устройствами")
+}
+
+Rel(user, WarmHouseSystem, "Пользуется системой")
+BiRel(WarmHouseSystem,api,"Управление умными устройствами")
+
+SHOW_LEGEND()
+@enduml

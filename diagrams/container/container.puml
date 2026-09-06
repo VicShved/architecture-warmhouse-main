@@ -1,0 +1,34 @@
+@startuml
+
+title WarmHome Container Diagram
+
+top to bottom direction
+
+!include ./C4_Container.puml
+
+Person(user, "Пользователь", "Пользователь warmhouse system")
+System(WarmHouseSystem, "Система Теплый дом", "Система управление умными устройствами")
+
+Container_Boundary(WarmHouseSystem, "Система Теплый дом") {
+
+  Container(WebApp, "Web приложение", "TS, Vue", "Предоставляет UI пользователям")
+  Container(UserService, "User Service", "Python, FastAPI", "Логика управления пользователями")
+  Container(SensorService, "Сервис умных устройств", "Python, FastAPI", "Логика управления умными устройствами")
+  ContainerDb(UserDatabase, "UserDatabase", "PostgreSQL", "Хранение данных пользователей")
+  ContainerDb(SensorDatabase, "SensorDatabase", "ClickHouse", "Хранение данных умных устройств")
+}
+
+Boundary(home, "Дома пользователей") {
+    System_Ext(api, "API умных устройств", "Взаимодействие с умными устройствами")
+}
+
+Rel(user, WebApp, "Пользуется системой")
+BiRel(WebApp, UserService,"Управление данными пользователя")
+BiRel(UserService,UserDatabase,"Чтение/запись данных пользователей")
+BiRel(WebApp, SensorService,"Управление данными умных устройств")
+BiRel(SensorService,SensorDatabase,"Чтение/запись данных умных устройств")
+BiRel(UserService,SensorService,"Управление конфигурациями умных устройств")
+BiRel(SensorService,api,"Управление умными устройствами")
+
+SHOW_LEGEND()
+@enduml
