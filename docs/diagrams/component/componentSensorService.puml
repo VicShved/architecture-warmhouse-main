@@ -3,7 +3,7 @@ title WarmHouse Sensor Service Component Diagram
 
 top to bottom direction
 
-!include ./C4_Component.puml
+!include ../templates/C4_Component.puml
 
 Container_Boundary(WarmHouseSystem, "Система Теплый дом") {
   Container(SensorService, "Сервис умных устройств", "Python, FastAPI", "Логика управления умными устройствами")

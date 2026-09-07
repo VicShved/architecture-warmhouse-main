@@ -3,7 +3,7 @@ title WarmHouse User Service Component Diagram
 
 top to bottom direction
 
-!include ./C4_Component.puml
+!include ../templates/C4_Component.puml
 
 Container_Boundary(WarmHouseSystem, "Система Теплый дом") {
   Container(AuthService, "Auth Service", "Python, FastAPI", "Аутентификация, выпуск и проверка JWT")

@@ -4,7 +4,7 @@ title WarmHome Container Diagram
 
 top to bottom direction
 
-!include ./C4_Container.puml
+!include ../templates/C4_Container.puml
 
 Person(user, "Пользователь", "Пользователь warmhouse system")
 Person(support, "Пользователи службы поддержки", "Операторы и специалисты техподдержки WarmHouse")

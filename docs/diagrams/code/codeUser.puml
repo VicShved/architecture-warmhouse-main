@@ -3,7 +3,7 @@ title WarmHouse UserService Code Diagram
 
 top to bottom direction
 
-!include ./C4_Component.puml
+!include ../templates/C4_Component.puml
 
 class User {
   +UUID id
