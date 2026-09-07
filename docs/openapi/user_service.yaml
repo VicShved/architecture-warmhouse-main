@@ -1,0 +1,848 @@
+openapi: 3.0.3
+info:
+  title: WarmHouse User Service API
+  description: |
+    Сервис управления пользователями и домами системы «Тёплый дом».
+    Хранит данные о пользователях, домах, комнатах и привязке датчиков к комнатам (room_sensors).
+    Все операции требуют авторизации — Bearer JWT (сервис валидирует токен через AuthService).
+  version: 1.0.0
+
+servers:
+  - url: http://localhost:8102/api/v1
+    description: Локальный запуск (базовый путь /api/v1)
+
+paths:
+  /me:
+    get:
+      summary: Профиль текущего пользователя
+      description: Возвращает профиль пользователя по данным из JWT (user_id).
+      operationId: getMe
+      tags: [ Users API ]
+      security:
+        - bearerAuth: [ ]
+      responses:
+        '200':
+          description: Профиль пользователя
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '401':
+          description: Токен отсутствует или невалиден
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Пользователь не найден
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /users:
+    get:
+      summary: Список пользователей
+      description: |
+        Список пользователей системы. Доступно для роли поддержки.
+        Поддерживается постраничная выдача (offset/limit).
+      operationId: listUsers
+      tags: [ Users API ]
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - $ref: '#/components/parameters/offsetParam'
+        - $ref: '#/components/parameters/limitParam'
+      responses:
+        '200':
+          description: Список пользователей
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/User'
+        '401':
+          description: Токен отсутствует или невалиден
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Недостаточно прав (не роль поддержки)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /users/{user_id}:
+    put:
+      summary: Изменение профиля пользователя
+      operationId: updateUser
+      tags: [ Users API ]
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - $ref: '#/components/parameters/userIDParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserUpdate'
+      responses:
+        '200':
+          description: Профиль обновлён
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '400':
+          description: Некорректный запрос
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Токен отсутствует или невалиден
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Изменение чужого профиля запрещено
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Пользователь не найден
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    delete:
+      summary: Удаление пользователя
+      operationId: deleteUser
+      tags: [ Users API ]
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - $ref: '#/components/parameters/userIDParam'
+      responses:
+        '204':
+          description: Пользователь удалён
+        '401':
+          description: Токен отсутствует или невалиден
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Удаление чужого профиля запрещено
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Пользователь не найден
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /houses:
+    get:
+      summary: Список домов текущего пользователя
+      operationId: listHouses
+      tags: [ Houses API ]
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - $ref: '#/components/parameters/offsetParam'
+        - $ref: '#/components/parameters/limitParam'
+      responses:
+        '200':
+          description: Список домов
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/House'
+        '401':
+          description: Токен отсутствует или невалиден
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    post:
+      summary: Создание дома
+      description: Привязывает дом к текущему пользователю (по JWT user_id).
+      operationId: createHouse
+      tags: [ Houses API ]
+      security:
+        - bearerAuth: [ ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/HouseCreate'
+      responses:
+        '201':
+          description: Дом создан
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/House'
+        '400':
+          description: Некорректный запрос
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Токен отсутствует или невалиден
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          description: Ошибка валидации данных
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /houses/{house_id}:
+    get:
+      summary: Детали дома
+      operationId: getHouse
+      tags: [ Houses API ]
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - $ref: '#/components/parameters/houseIDParam'
+      responses:
+        '200':
+          description: Дом
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/House'
+        '401':
+          description: Токен отсутствует или невалиден
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Дом принадлежит другому пользователю
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Дом не найден
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    put:
+      summary: Изменение дома
+      operationId: updateHouse
+      tags: [ Houses API ]
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - $ref: '#/components/parameters/houseIDParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/HouseUpdate'
+      responses:
+        '200':
+          description: Дом обновлён
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/House'
+        '400':
+          description: Некорректный запрос
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Токен отсутствует или невалиден
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Дом принадлежит другому пользователю
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Дом не найден
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    delete:
+      summary: Удаление дома
+      operationId: deleteHouse
+      tags: [ Houses API ]
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - $ref: '#/components/parameters/houseIDParam'
+      responses:
+        '204':
+          description: Дом удалён
+        '401':
+          description: Токен отсутствует или невалиден
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Дом принадлежит другому пользователю
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Дом не найден
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /houses/{house_id}/rooms:
+    get:
+      summary: Список комнат дома
+      operationId: listRooms
+      tags: [ Rooms API ]
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - $ref: '#/components/parameters/houseIDParam'
+      responses:
+        '200':
+          description: Список комнат
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Room'
+        '401':
+          description: Токен отсутствует или невалиден
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Дом принадлежит другому пользователю
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Дом не найден
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    post:
+      summary: Создание комнаты в доме
+      operationId: createRoom
+      tags: [ Rooms API ]
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - $ref: '#/components/parameters/houseIDParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RoomCreate'
+      responses:
+        '201':
+          description: Комната создана
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Room'
+        '400':
+          description: Некорректный запрос
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Токен отсутствует или невалиден
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Дом принадлежит другому пользователю
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Дом не найден
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          description: Ошибка валидации данных
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /rooms/{room_id}:
+    get:
+      summary: Детали комнаты
+      operationId: getRoom
+      tags: [ Rooms API ]
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - $ref: '#/components/parameters/roomIDParam'
+      responses:
+        '200':
+          description: Комната
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Room'
+        '401':
+          description: Токен отсутствует или невалиден
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Комната принадлежит другому пользователю
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Комната не найдена
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    put:
+      summary: Изменение комнаты
+      operationId: updateRoom
+      tags: [ Rooms API ]
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - $ref: '#/components/parameters/roomIDParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RoomUpdate'
+      responses:
+        '200':
+          description: Комната обновлена
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Room'
+        '400':
+          description: Некорректный запрос
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Токен отсутствует или невалиден
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Комната принадлежит другому пользователю
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Комната не найдена
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    delete:
+      summary: Удаление комнаты
+      operationId: deleteRoom
+      tags: [ Rooms API ]
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - $ref: '#/components/parameters/roomIDParam'
+      responses:
+        '204':
+          description: Комната удалена
+        '401':
+          description: Токен отсутствует или невалиден
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Комната принадлежит другому пользователю
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Комната не найдена
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /rooms/{room_id}/sensors/{sensor_id}:
+    post:
+      summary: Привязка датчика к комнате
+      description: |
+        Создаёт запись room_sensors(room_id, sensor_id).
+        Один датчик может быть привязан максимум к одной комнате (UNIQUE sensor_id).
+      operationId: attachSensorToRoom
+      tags: [ Rooms API ]
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - $ref: '#/components/parameters/roomIDParam'
+        - $ref: '#/components/parameters/sensorIDParam'
+      responses:
+        '200':
+          description: Датчик привязан к комнате
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RoomSensorRef'
+        '400':
+          description: Некорректный запрос
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Токен отсутствует или невалиден
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Комната принадлежит другому пользователю
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Комната не найдена
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Датчик уже привязан к комнате
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    delete:
+      summary: Отвязка датчика от комнаты
+      operationId: detachSensorFromRoom
+      tags: [ Rooms API ]
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - $ref: '#/components/parameters/roomIDParam'
+        - $ref: '#/components/parameters/sensorIDParam'
+      responses:
+        '204':
+          description: Датчик отвязан от комнаты
+        '401':
+          description: Токен отсутствует или невалиден
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Комната принадлежит другому пользователю
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Комната или привязка не найдена
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description:
+        Заголовок Authorization: Bearer <access_token>
+
+  parameters:
+    userIDParam:
+      name: user_id
+      in: path
+      required: true
+      description: Идентификатор пользователя (UUID)
+      schema:
+        type: string
+        format: uuid
+    houseIDParam:
+      name: house_id
+      in: path
+      required: true
+      description: Идентификатор дома (UUID)
+      schema:
+        type: string
+        format: uuid
+    roomIDParam:
+      name: room_id
+      in: path
+      required: true
+      description: Идентификатор комнаты (UUID)
+      schema:
+        type: string
+        format: uuid
+    sensorIDParam:
+      name: sensor_id
+      in: path
+      required: true
+      description: Идентификатор датчика (UUID)
+      schema:
+        type: string
+        format: uuid
+    offsetParam:
+      name: offset
+      in: query
+      required: false
+      description: Смещение для постраничной выдачи
+      schema:
+        type: integer
+        minimum: 0
+        default: 0
+    limitParam:
+      name: limit
+      in: query
+      required: false
+      description: Лимит количества записей
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+
+  schemas:
+    User:
+      type: object
+      required: [ id, name, email ]
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: 3f2b1c9e-8a6d-4f0a-9b1c-2d3e4f5a6b7c
+        name:
+          type: string
+          example: Иван Петров
+        email:
+          type: string
+          format: email
+          example: ivan@example.com
+
+    UserUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+          example: Иван Петров
+        email:
+          type: string
+          format: email
+          example: ivan@example.com
+
+    House:
+      type: object
+      required: [ id, user_id, address, name ]
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: 1a2b3c4d-5e6f-7a8b-9c0d-1e2f3a4b5c6d
+        user_id:
+          type: string
+          format: uuid
+          example: 3f2b1c9e-8a6d-4f0a-9b1c-2d3e4f5a6b7c
+        address:
+          type: string
+          example: ул. Центральная, д. 10
+        name:
+          type: string
+          description: Название дома
+          example: Загородный дом
+        start_date:
+          type: string
+          format: date
+          example: '2024-01-01'
+        end_date:
+          type: string
+          format: date
+          nullable: true
+          example: '2025-12-31'
+
+    HouseCreate:
+      type: object
+      required: [ address, name ]
+      properties:
+        address:
+          type: string
+          example: ул. Центральная, д. 10
+        name:
+          type: string
+          example: Загородный дом
+        start_date:
+          type: string
+          format: date
+          example: '2024-01-01'
+        end_date:
+          type: string
+          format: date
+          nullable: true
+          example: '2025-12-31'
+
+    HouseUpdate:
+      type: object
+      properties:
+        address:
+          type: string
+          example: ул. Центральная, д. 10
+        name:
+          type: string
+          example: Загородный дом
+        start_date:
+          type: string
+          format: date
+          example: '2024-01-01'
+        end_date:
+          type: string
+          format: date
+          nullable: true
+          example: '2025-12-31'
+
+    Room:
+      type: object
+      required: [ id, house_id, name, type ]
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: 9a8b7c6d-5e4f-3a2b-1c0d-9e8f7a6b5c4d
+        house_id:
+          type: string
+          format: uuid
+          example: 1a2b3c4d-5e6f-7a8b-9c0d-1e2f3a4b5c6d
+        name:
+          type: string
+          example: Гостиная
+        type:
+          type: string
+          description: Тип комнаты (строковое значение)
+          example: living_room
+
+    RoomCreate:
+      type: object
+      required: [ name, type ]
+      properties:
+        name:
+          type: string
+          example: Гостиная
+        type:
+          type: string
+          example: living_room
+
+    RoomUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+          example: Гостиная
+        type:
+          type: string
+          example: living_room
+
+    RoomSensorRef:
+      type: object
+      required: [ room_id, sensor_id ]
+      properties:
+        room_id:
+          type: string
+          format: uuid
+          example: 9a8b7c6d-5e4f-3a2b-1c0d-9e8f7a6b5c4d
+        sensor_id:
+          type: string
+          format: uuid
+          example: 5e4d3c2b-1a09-8765-4321-0fedcba98765
+
+    Error:
+      type: object
+      required: [ code, message ]
+      properties:
+        code:
+          type: string
+          description: Машинный код ошибки
+          example: NOT_FOUND
+        message:
+          type: string
+          description: Человекочитаемое описание
+          example: Дом не найден
+        request_id:
+          type: string
+          description: Идентификатор запроса для трассировки
+          example: req-7f9c3a2b
+
+tags:
+  - name: Users API
+    description: Профиль, список и управление пользователями
+  - name: Houses API
+    description: Управление домами текущего пользователя
+  - name: Rooms API
+    description: Управление комнатами и привязка датчиков

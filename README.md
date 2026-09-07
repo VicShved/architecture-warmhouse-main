@@ -55,7 +55,7 @@
 
 ### 5. Визуализация контекста системы — диаграмма С4
 
-[Диаграмма контекста в модели C4.](diagrams/context/context.puml)
+[Диаграмма контекста в модели C4.](docs/diagrams/context/context.puml)
 
 
 # Задание 2. Проектирование микросервисной архитектуры
@@ -64,29 +64,33 @@
 
 **Диаграмма контейнеров (Containers)**
 
-[Диаграмма  контейнеров](./diagrams/container/container.puml)
+  - [Диаграмма контейнеров](docs/diagrams/container/container.puml)
 
 **Диаграмма компонентов (Components)**
-
-Добавьте диаграмму для каждого из выделенных микросервисов.
+  - [Диаграмма веб приложения](docs/diagrams/component/componentWebApp.puml)
+  - [Диаграмма сервиса аутентификации](docs/diagrams/component/componentAuthService.puml)
+  - [Диаграмма сервиса пользователей](docs/diagrams/component/componentUserService.puml)
+  - [Диаграмма сервиса умных устройств](docs/diagrams/component/componentSensorService.puml)
 
 **Диаграмма кода (Code)**
 
-Добавьте одну диаграмму или несколько.
+  - [Диаграмма кода сервиса пользователей](docs/diagrams/code/codeUser.puml)
 
 # Задание 3. Разработка ER-диаграммы
 
-Добавьте сюда ER-диаграмму. Она должна отражать ключевые сущности системы, их атрибуты и тип связей между ними.
+  - [ER диаграмма Системы](docs/diagrams/er/erSystem.puml)
 
 # Задание 4. Создание и документирование API
 
 ### 1. Тип API
 
-Укажите, какой тип API вы будете использовать для взаимодействия микросервисов. Объясните своё решение.
+  - Для взаимодействия c сервисами будет использован REST подход
 
 ### 2. Документация API
 
-Здесь приложите ссылки на документацию API для микросервисов, которые вы спроектировали в первой части проектной работы. Для документирования используйте Swagger/OpenAPI или AsyncAPI.
+  - [Auth Service API](docs/openapi/auth_service.yaml)
+  - [User Service API](docs/openapi/user_service.yaml)
+  - [Sensor Service API](docs/openapi/sensor_service.yaml)
 
 # Задание 5. Работа с docker и docker-compose
 
