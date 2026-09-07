@@ -27,7 +27,7 @@ Boundary(home, "Дома пользователей") {
 Rel(user, WebApp, "Пользуется системой")
 Rel(support, WebApp, "Обращения, поддержка пользователей")
 Rel(WebApp, AuthService,"Логин, получение JWT")
-BiRel(UserService,UserDatabase,"Чтение/запись данных пользователей")
+Rel(UserService,UserDatabase,"Чтение/запись данных пользователей")
 Rel(WebApp, SensorService,"Управление данными умных устройств (проверка JWT через AuthService)")
 Rel(SensorService,SensorDatabase,"Чтение/запись данных умных устройств")
 Rel(UserService,SensorService,"Управление конфигурациями умных устройств (проверка JWT)")
