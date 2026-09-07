@@ -18,10 +18,10 @@ Container_Boundary(UserService, "User Service") {
 }
 
 
-BiRel(HouseAPI,ServiceLayer,"Вызовы бизнес логики")
-BiRel(ServiceLayer,RepositoryLayer,"Чтение/запись данных")
-BiRel(RepositoryLayer,UserDatabase,"Чтение/запись данных")
-BiRel(UserService,AuthService,"Валидация JWT")
+Rel(HouseAPI,ServiceLayer,"Вызовы бизнес логики")
+Rel(ServiceLayer,RepositoryLayer,"Чтение/запись данных")
+Rel(RepositoryLayer,UserDatabase,"Чтение/запись данных")
+Rel(UserService,AuthService,"Валидация JWT")
 
 SHOW_LEGEND()
 @enduml

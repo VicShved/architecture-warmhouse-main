@@ -17,10 +17,10 @@ Container_Boundary(AuthService, "Auth Service") {
     Component(RepositoryLayer, "Repository Layer", "Логика работы с базой данных")
 }
 
-BiRel(AuthAPI,ServiceLayer,"Вызовы бизнес логики")
-BiRel(TokenAPI,ServiceLayer,"Вызовы бизнес логики")
-BiRel(ServiceLayer,RepositoryLayer,"Чтение/запись данных")
-BiRel(RepositoryLayer,AuthDatabase,"Чтение/запись данных аутентификации")
+Rel(AuthAPI,ServiceLayer,"Вызовы бизнес логики")
+Rel(TokenAPI,ServiceLayer,"Вызовы бизнес логики")
+Rel(ServiceLayer,RepositoryLayer,"Чтение/запись данных")
+Rel(RepositoryLayer,AuthDatabase,"Чтение/запись данных аутентификации")
 
 SHOW_LEGEND()
 @enduml

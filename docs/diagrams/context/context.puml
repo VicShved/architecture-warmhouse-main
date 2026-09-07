@@ -13,8 +13,8 @@ Boundary(home, "Дома пользователей") {
 }
 
 Rel(user, WarmHouseSystem, "Пользуется системой")
-BiRel(support, WarmHouseSystem, "Обращения, поддержка пользователей")
-BiRel(WarmHouseSystem,api,"Управление умными устройствами")
+Rel(support, WarmHouseSystem, "Обращения, поддержка пользователей")
+Rel(WarmHouseSystem,api,"Управление умными устройствами")
 
 SHOW_LEGEND()
 @enduml

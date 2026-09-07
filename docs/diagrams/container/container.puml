@@ -25,17 +25,17 @@ Boundary(home, "Дома пользователей") {
  }
 
 Rel(user, WebApp, "Пользуется системой")
-BiRel(support, WebApp, "Обращения, поддержка пользователей")
-BiRel(WebApp, AuthService,"Логин, получение JWT")
+Rel(support, WebApp, "Обращения, поддержка пользователей")
+Rel(WebApp, AuthService,"Логин, получение JWT")
 BiRel(UserService,UserDatabase,"Чтение/запись данных пользователей")
-BiRel(WebApp, SensorService,"Управление данными умных устройств (проверка JWT через AuthService)")
-BiRel(SensorService,SensorDatabase,"Чтение/запись данных умных устройств")
-BiRel(UserService,SensorService,"Управление конфигурациями умных устройств (проверка JWT)")
-BiRel(SensorService,api,"Управление умными устройствами")
-BiRel(AuthService, UserService,"Проверка учётных данных и JWT")
-BiRel(AuthService, SensorService,"Валидация JWT")
-BiRel(WebApp, UserService, "Управление данными пользователя (JWT)")
-BiRel(AuthService, AuthDatabase, "Чтение/запись данных аутентификации")
+Rel(WebApp, SensorService,"Управление данными умных устройств (проверка JWT через AuthService)")
+Rel(SensorService,SensorDatabase,"Чтение/запись данных умных устройств")
+Rel(UserService,SensorService,"Управление конфигурациями умных устройств (проверка JWT)")
+Rel(SensorService,api,"Управление умными устройствами")
+Rel(UserService, AuthService, "Проверка учётных данных и JWT")
+Rel(SensorService, AuthService, "Проверка учётных данных и JWT")
+Rel(WebApp, UserService, "Управление данными пользователя")
+Rel(AuthService, AuthDatabase, "Чтение/запись данных аутентификации")
 
 SHOW_LEGEND()
 @enduml

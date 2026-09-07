@@ -23,14 +23,14 @@ Container_Boundary(WebApp, "Web приложение") {
 }
 
 Rel(user, WebApp, "Пользуется системой")
-BiRel(support, WebApp, "Обращения, поддержка пользователей")
+Rel(support, WebApp, "Обращения, поддержка пользователей")
 Rel(Pages, Router, "Навигация по экранам")
-BiRel(Router, AuthStore, "Проверка и хранение JWT")
-BiRel(Pages, ApiClient, "Вызовы API")
-BiRel(AuthStore, ApiClient, "Передача JWT в запросы")
-BiRel(ApiClient, AuthService, "Логин, получение JWT")
-BiRel(ApiClient, UserService, "Управление данными пользователя (JWT)")
-BiRel(ApiClient, SensorService, "Управление данными умных устройств (проверка JWT)")
+Rel(Router, AuthStore, "Проверка и хранение JWT")
+Rel(Pages, ApiClient, "Вызовы API")
+Rel(ApiClient, AuthStore, "Получение JWT для запросов")
+Rel(ApiClient, AuthService, "Логин, получение JWT")
+Rel(ApiClient, UserService, "Управление данными пользователя (JWT)")
+Rel(ApiClient, SensorService, "Управление данными умных устройств (проверка JWT)")
 
 SHOW_LEGEND()
 @enduml
