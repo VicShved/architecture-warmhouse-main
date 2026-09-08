@@ -1,0 +1,852 @@
+openapi: 3.0.3
+info:
+  title: WarmHouse Sensor Service API
+  description: |
+    Сервис управления умными устройствами системы «Тёплый дом».
+    Обеспечивает CRUD датчиков, историю показаний (телеметрия),
+    справочник типов датчиков и конфигурации устройств.
+    Все операции требуют авторизации — Bearer JWT (валидация через AuthService).
+  version: 1.0.0
+
+servers:
+  - url: http://localhost:8103/api/v1
+    description: Локальный запуск (базовый путь /api/v1)
+
+paths:
+  /sensors:
+    get:
+      summary: Список датчиков
+      description: |
+        Возвращает датчики. Доступна фильтрация по типу и постраничная выдача.
+      operationId: listSensors
+      tags: [ Sensor API ]
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - name: sensor_type_id
+          in: query
+          required: false
+          description: Фильтр по типу датчика
+          schema:
+            type: string
+            format: uuid
+        - $ref: '#/components/parameters/offsetParam'
+        - $ref: '#/components/parameters/limitParam'
+      responses:
+        '200':
+          description: Список датчиков
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Sensor'
+        '401':
+          description: Токен отсутствует или невалиден
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    post:
+      summary: Создание датчика
+      description: |
+        Регистрирует новый датчик в системе.
+        Владелец (owner_id) берётся из user_id JWT — в теле не передаётся.
+      operationId: createSensor
+      tags: [ Sensor API ]
+      security:
+        - bearerAuth: [ ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SensorCreate'
+      responses:
+        '201':
+          description: Датчик создан
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Sensor'
+        '400':
+          description: Некорректный запрос
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Токен отсутствует или невалиден
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          description: Ошибка валидации данных
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /sensors/{sensor_id}:
+    get:
+      summary: Детали датчика
+      operationId: getSensor
+      tags: [ Sensor API ]
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - $ref: '#/components/parameters/sensorIDParam'
+      responses:
+        '200':
+          description: Датчик
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Sensor'
+        '401':
+          description: Токен отсутствует или невалиден
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Датчик принадлежит другому пользователю
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Датчик не найден
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    put:
+      summary: Изменение датчика
+      operationId: updateSensor
+      tags: [ Sensor API ]
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - $ref: '#/components/parameters/sensorIDParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SensorUpdate'
+      responses:
+        '200':
+          description: Датчик обновлён
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Sensor'
+        '400':
+          description: Некорректный запрос
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Токен отсутствует или невалиден
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Датчик принадлежит другому пользователю
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Датчик не найден
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    delete:
+      summary: Удаление датчика
+      operationId: deleteSensor
+      tags: [ Sensor API ]
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - $ref: '#/components/parameters/sensorIDParam'
+      responses:
+        '204':
+          description: Датчик удалён
+        '401':
+          description: Токен отсутствует или невалиден
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Датчик принадлежит другому пользователю
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Датчик не найден
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /sensors/{sensor_id}/values:
+    get:
+      summary: История показаний датчика
+      description: |
+        Возвращает показания датчика за период. Поддерживаются фильтры from/to
+        (ISO 8601) и ограничение количества записей (limit).
+      operationId: getSensorValues
+      tags: [ Sensor API ]
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - $ref: '#/components/parameters/sensorIDParam'
+        - name: from
+          in: query
+          required: false
+          description: Начало периода (ISO 8601)
+          schema:
+            type: string
+            format: date-time
+            example: '2024-01-01T00:00:00Z'
+        - name: to
+          in: query
+          required: false
+          description: Конец периода (ISO 8601)
+          schema:
+            type: string
+            format: date-time
+            example: '2024-01-31T23:59:59Z'
+        - $ref: '#/components/parameters/limitParam'
+      responses:
+        '200':
+          description: Список показаний (новые — последними)
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SensorValue'
+        '401':
+          description: Токен отсутствует или невалиден
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Датчик принадлежит другому пользователю
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Датчик не найден
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /sensors/{sensor_id}/values/latest:
+    get:
+      summary: Последнее показание датчика
+      operationId: getLatestSensorValue
+      tags: [ Sensor API ]
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - $ref: '#/components/parameters/sensorIDParam'
+      responses:
+        '200':
+          description: Последнее показание
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SensorValue'
+        '401':
+          description: Токен отсутствует или невалиден
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Датчик принадлежит другому пользователю
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Датчик не найден или показаний нет
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /sensors/{sensor_id}/config:
+    get:
+      summary: Конфигурация датчика
+      description: Возвращает конфигурацию, привязанную к датчику.
+      operationId: getSensorConfig
+      tags: [ Config API ]
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - $ref: '#/components/parameters/sensorIDParam'
+      responses:
+        '200':
+          description: Конфигурация датчика
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeviceConfig'
+        '401':
+          description: Токен отсутствует или невалиден
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Датчик принадлежит другому пользователю
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Датчик или конфигурация не найдены
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    put:
+      summary: Установка конфигурации датчика
+      operationId: setSensorConfig
+      tags: [ Config API ]
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - $ref: '#/components/parameters/sensorIDParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ConfigUpdate'
+      responses:
+        '200':
+          description: Конфигурация установлена
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeviceConfig'
+        '400':
+          description: Некорректный запрос
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Токен отсутствует или невалиден
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Датчик принадлежит другому пользователю
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Датчик не найден
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /configs:
+    get:
+      summary: Список конфигураций
+      operationId: listConfigs
+      tags: [ Config API ]
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - $ref: '#/components/parameters/offsetParam'
+        - $ref: '#/components/parameters/limitParam'
+      responses:
+        '200':
+          description: Список конфигураций
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/DeviceConfig'
+        '401':
+          description: Токен отсутствует или невалиден
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    post:
+      summary: Создание конфигурации
+      operationId: createConfig
+      tags: [ Config API ]
+      security:
+        - bearerAuth: [ ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ConfigCreate'
+      responses:
+        '201':
+          description: Конфигурация создана
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeviceConfig'
+        '400':
+          description: Некорректный запрос
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Токен отсутствует или невалиден
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Для датчика уже существует конфигурация
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          description: Ошибка валидации данных
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /configs/{config_id}:
+    get:
+      summary: Детали конфигурации
+      operationId: getConfig
+      tags: [ Config API ]
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - $ref: '#/components/parameters/configIDParam'
+      responses:
+        '200':
+          description: Конфигурация
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeviceConfig'
+        '401':
+          description: Токен отсутствует или невалиден
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Конфигурация не найдена
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    put:
+      summary: Изменение конфигурации
+      operationId: updateConfig
+      tags: [ Config API ]
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - $ref: '#/components/parameters/configIDParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ConfigUpdate'
+      responses:
+        '200':
+          description: Конфигурация обновлена
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeviceConfig'
+        '400':
+          description: Некорректный запрос
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Токен отсутствует или невалиден
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Конфигурация не найдена
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    delete:
+      summary: Удаление конфигурации
+      operationId: deleteConfig
+      tags: [ Config API ]
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - $ref: '#/components/parameters/configIDParam'
+      responses:
+        '204':
+          description: Конфигурация удалена
+        '401':
+          description: Токен отсутствует или невалиден
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Конфигурация не найдена
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /sensor_types:
+    get:
+      summary: Справочник типов датчиков
+      operationId: listSensorTypes
+      tags: [ Sensor API ]
+      security:
+        - bearerAuth: [ ]
+      responses:
+        '200':
+          description: Список типов датчиков
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SensorType'
+        '401':
+          description: Токен отсутствует или невалиден
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /sensor_types/{sensor_type_id}:
+    get:
+      summary: Детали типа датчика
+      operationId: getSensorType
+      tags: [ Sensor API ]
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - $ref: '#/components/parameters/sensorTypeIDParam'
+      responses:
+        '200':
+          description: Тип датчика
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SensorType'
+        '401':
+          description: Токен отсутствует или невалиден
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Тип датчика не найден
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description:
+        Заголовок Authorization: Bearer <access_token>
+
+  parameters:
+    sensorIDParam:
+      name: sensor_id
+      in: path
+      required: true
+      description: Идентификатор датчика (UUID)
+      schema:
+        type: string
+        format: uuid
+    sensorTypeIDParam:
+      name: sensor_type_id
+      in: path
+      required: true
+      description: Идентификатор типа датчика (UUID)
+      schema:
+        type: string
+        format: uuid
+    configIDParam:
+      name: config_id
+      in: path
+      required: true
+      description: Идентификатор конфигурации (UUID)
+      schema:
+        type: string
+        format: uuid
+    offsetParam:
+      name: offset
+      in: query
+      required: false
+      description: Смещение для постраничной выдачи
+      schema:
+        type: integer
+        minimum: 0
+        default: 0
+    limitParam:
+      name: limit
+      in: query
+      required: false
+      description: Лимит количества записей
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 1000
+        default: 100
+
+  schemas:
+    Sensor:
+      type: object
+      required: [ id, owner_id, name, sensor_type_id, status, created_at ]
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: 5e4d3c2b-1a09-8765-4321-0fedcba98765
+        owner_id:
+          type: string
+          format: uuid
+          description: Владелец датчика (user_id из JWT при создании)
+          example: 3f2b1c9e-8a6d-4f0a-9b1c-2d3e4f5a6b7c
+        name:
+          type: string
+          example: Температура гостиной
+        sensor_type_id:
+          type: string
+          format: uuid
+          example: 7f6e5d4c-3b2a-1987-6543-210fedcba987
+        status:
+          type: string
+          enum: [ active, inactive, error ]
+          example: active
+        location:
+          type: string
+          nullable: true
+          example: Гостиная
+        created_at:
+          type: string
+          format: date-time
+          example: '2024-01-15T10:30:00Z'
+
+    SensorCreate:
+      type: object
+      required: [ name, sensor_type_id ]
+      properties:
+        name:
+          type: string
+          example: Температура гостиной
+        sensor_type_id:
+          type: string
+          format: uuid
+          example: 7f6e5d4c-3b2a-1987-6543-210fedcba987
+        status:
+          type: string
+          enum: [ active, inactive, error ]
+          default: active
+          example: active
+        location:
+          type: string
+          nullable: true
+          example: Гостиная
+
+    SensorUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+          example: Температура гостиной
+        sensor_type_id:
+          type: string
+          format: uuid
+          example: 7f6e5d4c-3b2a-1987-6543-210fedcba987
+        status:
+          type: string
+          enum: [ active, inactive, error ]
+          example: active
+        location:
+          type: string
+          nullable: true
+          example: Гостиная
+
+    SensorValue:
+      type: object
+      required: [ id, sensor_id, value, measured_at ]
+      properties:
+        id:
+          type: integer
+          format: int64
+          description: Суррогатный ключ показания
+          example: 1042
+        sensor_id:
+          type: string
+          format: uuid
+          example: 5e4d3c2b-1a09-8765-4321-0fedcba98765
+        value:
+          type: number
+          format: double
+          example: 22.5
+        measured_at:
+          type: string
+          format: date-time
+          example: '2024-01-15T10:30:00Z'
+
+    SensorType:
+      type: object
+      required: [ id, name, unit ]
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: 7f6e5d4c-3b2a-1987-6543-210fedcba987
+        name:
+          type: string
+          example: temperature
+        unit:
+          type: string
+          description: Единица измерения
+          example: °C
+        description:
+          type: string
+          nullable: true
+          example: Температура воздуха
+
+    DeviceConfig:
+      type: object
+      required: [ id, sensor_id, poll_interval, enabled ]
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: 1a2b3c4d-5e6f-7a8b-9c0d-1e2f3a4b5c6d
+        sensor_id:
+          type: string
+          format: uuid
+          example: 5e4d3c2b-1a09-8765-4321-0fedcba98765
+        poll_interval:
+          type: integer
+          description: Период опроса датчика в секундах
+          example: 300
+        enabled:
+          type: boolean
+          description: Включён ли периодический сбор показаний
+          example: true
+        settings:
+          type: object
+          description: Произвольные настройки устройства
+          additionalProperties: true
+          example:
+            threshold: 30
+        updated_at:
+          type: string
+          format: date-time
+          example: '2024-01-15T10:30:00Z'
+
+    ConfigCreate:
+      type: object
+      required: [ sensor_id, poll_interval ]
+      properties:
+        sensor_id:
+          type: string
+          format: uuid
+          example: 5e4d3c2b-1a09-8765-4321-0fedcba98765
+        poll_interval:
+          type: integer
+          minimum: 10
+          example: 300
+        enabled:
+          type: boolean
+          default: true
+          example: true
+        settings:
+          type: object
+          additionalProperties: true
+          example:
+            threshold: 30
+
+    ConfigUpdate:
+      type: object
+      properties:
+        poll_interval:
+          type: integer
+          minimum: 10
+          example: 300
+        enabled:
+          type: boolean
+          example: true
+        settings:
+          type: object
+          additionalProperties: true
+          example:
+            threshold: 40
+
+    Error:
+      type: object
+      required: [ code, message ]
+      properties:
+        code:
+          type: string
+          description: Машинный код ошибки
+          example: NOT_FOUND
+        message:
+          type: string
+          description: Человекочитаемое описание
+          example: Датчик не найден
+        request_id:
+          type: string
+          description: Идентификатор запроса для трассировки
+          example: req-7f9c3a2b
+
+tags:
+  - name: Sensor API
+    description: Датчики, показания, справочник типов
+  - name: Config API
+    description: Конфигурации умных устройств

@@ -1,0 +1,49 @@
+@startuml
+title WarmHouse UserService Code Diagram
+
+top to bottom direction
+
+!include ../templates/C4_Component.puml
+
+class User {
+  +UUID id
+  +String name
+  +String email
+  +List<House> houses
+  +House add_house(House)
+  +void remove_house(House)
+}
+
+class House {
+  +UUID id
+  +User user
+  +String address
+  +String name
+  +Date startDate
+  +Date endDate
+  +List<Room> rooms
+  +Room add_room(Room)
+  +void remove_room(Room)
+}
+
+class Room {
+  +UUID id
+  +House house
+  +String name
+  +String type
+  +UUID add_sensor_ref(UUID)
+  +void remove_sensor_ref(UUID)
+  +List<UUID> get_sensor_ids()
+}
+
+class SensorRef {
+  +UUID sensor_ref
+  +Room room
+}
+
+User "1" -- "0..*" House : has
+House "1" -- "0..*" Room : includes
+Room "1" -- "0..*" SensorRef : has
+
+SHOW_LEGEND()
+@enduml

@@ -1,0 +1,42 @@
+@startuml
+title WarmHouse Sensor Service Component Diagram
+
+top to bottom direction
+
+!include ../templates/C4_Component.puml
+
+Container_Boundary(WarmHouseSystem, "Система Теплый дом") {
+  Container(SensorService, "Сервис умных устройств", "Python, FastAPI", "Логика управления умными устройствами")
+  Container(AuthService, "Auth Service", "Python, FastAPI", "Аутентификация, выпуск и проверка JWT")
+  ContainerDb(SensorDatabase, "SensorDatabase", "ClickHouse", "Хранение данных умных устройств")
+}
+
+Container_Boundary(SensorService, "Сервис умных устройств") {
+  Component(SensorAPI, "Sensor API", "Управление данными умных устройств")
+  Component(ConfigAPI, "Config API", "Управление конфигурациями умных устройств")
+  Component(ServiceLayer, "Service Layer", "Логика управления умными устройствами")
+  Component(TelemetryCollector, "Telemetry Collector", "Scheduler", "Периодический опрос показаний датчиков по расписанию")
+  Component(DeviceIntegration, "Device Integration", "Адаптер внешнего API: команды устройствам, приём событий")
+  Component(RepositoryLayer, "Repository Layer", "Логика работы с базой данных")
+}
+
+Boundary(home, "Дома пользователей") {
+    System_Ext(api, "API умных устройств", "Взаимодействие с умными устройствами")
+}
+
+Rel(SensorAPI, ServiceLayer, "Вызовы бизнес логики")
+Rel(ConfigAPI, ServiceLayer, "Вызовы бизнес логики")
+Rel(SensorService, AuthService, "Валидация JWT")
+Rel(ServiceLayer, DeviceIntegration, "Управление умными устройствами")
+Rel(DeviceIntegration, api, "Команды и события устройств")
+Rel(ServiceLayer, RepositoryLayer, "Чтение/запись данных")
+Rel(RepositoryLayer, SensorDatabase, "Чтение/запись данных")
+Rel(ServiceLayer, TelemetryCollector, "Установка периодического опроса")
+Rel(TelemetryCollector, DeviceIntegration, "Периодический запрос показаний")
+Rel(TelemetryCollector, RepositoryLayer, "Сохранение показаний")
+
+Note right of SensorAPI
+  Доступ к датчику: user_id из JWT сверяется с owner_id датчика
+end note
+SHOW_LEGEND()
+@enduml

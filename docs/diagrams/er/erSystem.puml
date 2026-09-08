@@ -1,0 +1,71 @@
+@startuml
+title WarmHouse System ER Diagram
+
+hide circle
+skinparam linetype ortho
+
+entity "users" as users {
+  *id : UUID <<PK>>
+  --
+  *name : varchar
+  *email : varchar <<UQ>>
+}
+
+entity "houses" as houses {
+  *id : UUID <<PK>>
+  --
+  *user_id : UUID <<FK>>
+  *address : varchar
+  *name : varchar
+  start_date : date
+  end_date : date
+}
+
+entity "rooms" as rooms {
+  *id : UUID <<PK>>
+  --
+  *house_id : UUID <<FK>>
+  *name : varchar
+  *type : varchar
+}
+
+entity "room_sensors" as room_sensors {
+  *id : bigint <<PK>>
+  --
+  *room_id : UUID <<FK>>
+  *sensor_id : UUID <<FK, UQ>> — ссылка на sensor.id (логическая, БД разные)
+}
+
+entity "sensor_types" as sensor_types {
+  *id : UUID <<PK>>
+  --
+  *name : varchar
+  *unit : varchar
+  description : varchar
+}
+
+entity "sensors" as sensors {
+  *id : UUID <<PK>>
+  --
+  *owner_id : UUID <<FK>> — ссылка на users.id (логическая, БД разные)
+  *name : varchar
+  *sensor_type_id : UUID <<FK>>
+  *status : varchar
+  location : varchar
+}
+
+entity "sensor_values" as sensor_values {
+  *id : bigint <<PK>>
+  --
+  *sensor_id : UUID <<FK>>
+  *value : double
+  *measured_at : timestamp
+}
+
+users ||--o{ houses : "владеет"
+houses ||--o{ rooms : "содержит"
+rooms ||--o{ room_sensors : "регистрирует"
+sensors ||--o room_sensors : "привязан к комнате"
+sensor_types ||--o{ sensors : "включает"
+sensors ||--o{ sensor_values : "генерирует"
+@enduml

@@ -1,0 +1,27 @@
+@startuml
+title WarmHouse User Service Component Diagram
+
+top to bottom direction
+
+!include ../templates/C4_Component.puml
+
+Container_Boundary(WarmHouseSystem, "Система Теплый дом") {
+  Container(AuthService, "Auth Service", "Python, FastAPI", "Аутентификация, выпуск и проверка JWT")
+  Container(UserService, "User Service", "Python, FastAPI", "Управление пользователями и домами")
+  ContainerDb(UserDatabase, "UserDatabase", "PostgreSQL", "Хранение данных пользователей")
+}
+
+Container_Boundary(UserService, "User Service") {
+  Component(HouseAPI, "House API", "Управление домами пользователя")
+  Component(ServiceLayer, "Service Layer", "Управление пользователями и домами")
+  Component(RepositoryLayer, "Repository Layer", "Логика работы с базой данных")
+}
+
+
+Rel(HouseAPI,ServiceLayer,"Вызовы бизнес логики")
+Rel(ServiceLayer,RepositoryLayer,"Чтение/запись данных")
+Rel(RepositoryLayer,UserDatabase,"Чтение/запись данных")
+Rel(UserService,AuthService,"Валидация JWT")
+
+SHOW_LEGEND()
+@enduml

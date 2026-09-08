@@ -1,0 +1,273 @@
+openapi: 3.0.3
+info:
+  title: WarmHouse Auth Service API
+  description: |
+    Сервис аутентификации системы «Тёплый дом».
+    Отвечает за регистрацию пользователей, выпуск и обновление JWT-токенов,
+    а также за валидацию токенов для остальных сервисов (Token API).
+    Взаимодействие — REST, аутентификация — Bearer JWT.
+  version: 1.0.0
+
+servers:
+  - url: http://localhost:8101/api/v1
+    description: Локальный запуск (базовый путь /api/v1)
+
+paths:
+  /auth/register:
+    post:
+      summary: Регистрация нового пользователя
+      description: |
+        Создаёт учётную запись. Пароль хранится в виде хеша в AuthDatabase.
+        В случае успеха возвращает идентификатор пользователя.
+      operationId: registerUser
+      tags: [ Auth API ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '201':
+          description: Пользователь успешно зарегистрирован
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RegisterResponse'
+        '400':
+          description: Некорректный запрос
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Пользователь с таким именем уже существует
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          description: Ошибка валидации данных
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /auth/login:
+    post:
+      summary: Вход в систему
+      description: |
+        Проверяет учётные данные и выдаёт пару токенов:
+        JWT access-токен (короткоживущий) и refresh-токен (долгоживущий).
+      operationId: loginUser
+      tags: [ Auth API ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Успешный вход, выданы токены
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenPair'
+        '400':
+          description: Некорректный запрос
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Неверное имя пользователя или пароль
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          description: Ошибка валидации данных
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /auth/refresh:
+    post:
+      summary: Обновление access-токена
+      description: |
+        По действующему refresh-токену выпускает новую пару токенов.
+        Используется, когда access-токен истёк.
+      operationId: refreshToken
+      tags: [ Auth API ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshRequest'
+      responses:
+        '200':
+          description: Новая пара токенов выдана
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenPair'
+        '400':
+          description: Некорректный запрос
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Refresh-токен недействителен или истёк
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /auth/verify:
+    get:
+      summary: Проверка JWT
+      description: |
+        Валидация access-токена. Используется другими сервисами
+        (UserService, SensorService) и WebApp для проверки подлинности запроса.
+        Требует заголовок Authorization: Bearer <token>.
+      operationId: verifyToken
+      tags: [ Token API ]
+      security:
+        - bearerAuth: [ ]
+      responses:
+        '200':
+          description: Токен действителен, возвращены данные владельца
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VerifyResponse'
+        '401':
+          description: Токен отсутствует, невалиден или истёк
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description:
+        Заголовок Authorization: Bearer <access_token>
+
+  schemas:
+    RegisterRequest:
+      type: object
+      required: [ username, password ]
+      properties:
+        username:
+          type: string
+          minLength: 3
+          maxLength: 64
+          example: ivan
+        password:
+          type: string
+          format: password
+          minLength: 8
+          example: secret-password
+
+    RegisterResponse:
+      type: object
+      required: [ user_id, username ]
+      properties:
+        user_id:
+          type: string
+          format: uuid
+          example: 3f2b1c9e-8a6d-4f0a-9b1c-2d3e4f5a6b7c
+        username:
+          type: string
+          example: ivan
+
+    LoginRequest:
+      type: object
+      required: [ username, password ]
+      properties:
+        username:
+          type: string
+          example: ivan
+        password:
+          type: string
+          format: password
+          example: secret-password
+
+    RefreshRequest:
+      type: object
+      required: [ refresh_token ]
+      properties:
+        refresh_token:
+          type: string
+          example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+
+    TokenPair:
+      type: object
+      required: [ access_token, refresh_token, token_type, expires_in ]
+      properties:
+        access_token:
+          type: string
+          description: JWT access-токен
+          example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        refresh_token:
+          type: string
+          description: Долгоживущий refresh-токен
+          example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        token_type:
+          type: string
+          enum: [ Bearer ]
+          example: Bearer
+        expires_in:
+          type: integer
+          description: Время жизни access-токена в секундах
+          example: 900
+
+    VerifyResponse:
+      type: object
+      required: [ valid, user_id, username, exp ]
+      properties:
+        valid:
+          type: boolean
+          example: true
+        user_id:
+          type: string
+          format: uuid
+          example: 3f2b1c9e-8a6d-4f0a-9b1c-2d3e4f5a6b7c
+        username:
+          type: string
+          example: ivan
+        exp:
+          type: integer
+          description: Время истечения токена (Unix timestamp)
+          example: 1699999999
+
+    Error:
+      type: object
+      required: [ code, message ]
+      properties:
+        code:
+          type: string
+          description: Машинный код ошибки
+          example: INVALID_CREDENTIALS
+        message:
+          type: string
+          description: Человекочитаемое описание
+          example: Неверное имя пользователя или пароль
+        request_id:
+          type: string
+          description: Идентификатор запроса для трассировки
+          example: req-7f9c3a2b
+
+tags:
+  - name: Auth API
+    description: Регистрация, вход, обновление токенов
+  - name: Token API
+    description: Валидация JWT для внутренних вызовов
