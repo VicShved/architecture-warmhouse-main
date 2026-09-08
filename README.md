@@ -40,7 +40,7 @@
 
 ### 3. Определение доменов и границы контекстов
 
-Домены:
+Домены (To Be):
   - Управление пользователями и их домами. Сервис UserService, база UserDatabase (PostgreSQL). Отвечает за пользователей, дома и комнаты: сущности `users`, `houses`, `rooms`, `room_sensors`.
   - Управление умными устройствами и телеметрия. Сервис SensorService, база SensorDatabase (ClickHouse). Отвечает за датчики, их типы и показания: сущности `sensors`, `sensor_types`, `sensor_values`; включает периодический сбор показаний (TelemetryCollector). 
   - Аутентификация и авторизация (вспомогательный домен). Сервис AuthService, база AuthDatabase (PostgreSQL). Выпуск и проверка JWT. 
